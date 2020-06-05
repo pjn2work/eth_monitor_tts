@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 
-from time import sleep
-from os import devnull, path
-from datetime import datetime
+
 import subprocess
 import sys
+from time import sleep
+from os import devnull, path, name
+from datetime import datetime
 from gtts import gTTS
 from playsound import playsound
+
+
+def is_windows():
+	return name == "nt"
+
+
+def is_linux():
+	return name == "posix"
 
 
 sound_notifications = {
@@ -45,7 +54,11 @@ def notify_wan(is_up):
 
 
 def get_default_gw():
-	return subprocess.check_output("route -n -4 | awk 'FNR == 3 {print $2}'", shell=True).decode("utf-8")[:-1]
+	if is_windows():
+		res = subprocess.check_output("ipconfig | findstr /i default | findstr /R [0-9]", shell=True).decode("utf-8")[39:]
+	else:
+		res = subprocess.check_output("route -n -4 | awk 'FNR == 3 {print $2}'", shell=True).decode("utf-8")[:-1]
+	return res
 
 
 FNULL = open(devnull, 'w')
@@ -54,6 +67,8 @@ IP_DGW = get_default_gw()
 
 
 def is_online(ip):
+	if is_windows():
+		return subprocess.call(f"ping -n 1 -w 1000 {ip}", shell=True, stderr=FNULL, stdout=FNULL) == 0
 	return subprocess.call(f"ping -c 1 -W 1 {ip}", shell=True, stderr=FNULL, stdout=FNULL) == 0
 
 
